@@ -9,6 +9,9 @@ public class InputHandler : MonoBehaviour
     public float horizontalInput;
     public float verticalInput;
 
+    public float mouseVerticalInput;
+    public float mouseHorizontalInput;
+
     public float moveAmount;
 
     private void Awake()
@@ -26,6 +29,7 @@ public class InputHandler : MonoBehaviour
     private void Update()
     {
         HandleHorizontalAndVerticalInput();
+        HandleMouseInput();
     }
 
     public bool isHorizontalInputPressed()
@@ -45,5 +49,11 @@ public class InputHandler : MonoBehaviour
 
         moveAmount = Mathf.Clamp01(Mathf.Abs(verticalInput) + Mathf.Abs(horizontalInput));
 
+    }
+
+    private void HandleMouseInput()
+    {
+        mouseHorizontalInput = Input.GetAxis("Mouse X");
+        mouseVerticalInput = Input.GetAxis("Mouse Y");
     }
 }

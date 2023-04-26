@@ -9,6 +9,7 @@ namespace NB
         Rigidbody rb;
 
         public Transform direction;
+        public Camera mainCamera;
 
 
         [Header("Locomotion Settings")]
@@ -16,11 +17,14 @@ namespace NB
         [SerializeField] float maxSpeed = 10f;
         [SerializeField] float mouseXSensitivity;
         [SerializeField] float mouseYSensitivity;
+        [SerializeField] float maxYAngle = 90;
+        [SerializeField] float minYAngle = -90;
+
 
 
         [Header("Locomotion Values")]
-        float mouseXAngle;
-        float mouseYAngle;
+        [SerializeField] float mouseXAngle;
+        [SerializeField] float mouseYAngle;
 
         private void Start()
         {
@@ -51,11 +55,19 @@ namespace NB
 
         public void HandlePlayerRotation()
         {
-            //Get Mouse input
-            //Update the mouseXAngle and mouseYAngle by these values
-            //Clamp the Y Angle
-            // Create a Euler with Y rotation and rotate camera on X axis
-            //Create a Euler with X  and Y rotation and rotate direction on both axis
+            float newMouseX = InputHandler.instance.mouseHorizontalInput;
+            float newMouseY = InputHandler.instance.mouseVerticalInput;
+
+            mouseXAngle += newMouseX;
+            mouseYAngle -= newMouseY;
+
+            mouseYAngle = Mathf.Clamp(mouseYAngle, minYAngle, maxYAngle);
+
+            Quaternion targetRotation = Quaternion.Euler(mouseYAngle, mouseXAngle, 0);
+            mainCamera.transform.rotation = targetRotation;
+
+            targetRotation = Quaternion.Euler(0, mouseXAngle, 0);
+            direction.transform.rotation = targetRotation;
         }
 
 

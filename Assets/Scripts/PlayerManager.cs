@@ -12,6 +12,10 @@ namespace NB
         {
             playerLocomotion = GetComponent<PlayerLocomotion>();
         }
+        private void Update()
+        {
+            playerLocomotion.HandlePlayerRotation();
+        }
 
         private void FixedUpdate()
         {
