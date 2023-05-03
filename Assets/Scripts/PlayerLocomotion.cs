@@ -10,6 +10,7 @@ namespace NB
 
         public Transform direction;
         public Camera mainCamera;
+        public Transform cameraHolder;
         public LayerMask groundLayer;
 
 
@@ -60,6 +61,7 @@ namespace NB
             Vector3 right = direction.transform.right * horizontal * Time.fixedDeltaTime;
             Vector3 inputVelocity = forward + right;
             inputVelocity.Normalize();
+            CheckForSlope();
             if (isGrounded)
             {
                 rb.AddForce(inputVelocity * currentMultiplier, ForceMode.Force);
@@ -104,7 +106,7 @@ namespace NB
             mouseYAngle = Mathf.Clamp(mouseYAngle, minYAngle, maxYAngle);
 
             Quaternion targetRotation = Quaternion.Euler(mouseYAngle, mouseXAngle, 0);
-            mainCamera.transform.rotation = targetRotation;
+            cameraHolder.transform.rotation = targetRotation;
 
             targetRotation = Quaternion.Euler(0, mouseXAngle, 0);
             direction.transform.rotation = targetRotation;
@@ -116,6 +118,19 @@ namespace NB
             if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.15f, groundLayer))
             {
                 isGrounded = true;
+            }
+            else
+            {
+                isGrounded = false;
+            }
+        }
+
+        public void CheckForSlope()
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.25f, groundLayer))
+            {
+                Debug.Log(Vector3.Angle(hit.normal, -Vector3.down));
             }
             else
             {
