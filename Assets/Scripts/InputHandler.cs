@@ -32,14 +32,24 @@ public class InputHandler : MonoBehaviour
         HandleMouseInput();
     }
 
-    public bool isHorizontalInputPressed()
+    public bool IsHorizontalInputPressed()
     {
         return Input.GetAxisRaw("Horizontal") > 0.1f || Input.GetAxisRaw("Horizontal") < -0.1f;
     }
 
-    public bool isVerticalInputPressed()
+    public bool IsVerticalInputPressed()
     {
         return Input.GetAxisRaw("Vertical") > 0.1f || Input.GetAxisRaw("Vertical") < -0.1f;
+    }
+
+    public bool IsSprintInputPressed()
+    {
+        return Input.GetKey(KeyCode.LeftShift);
+    }
+
+    public bool IsJumpInputPressed()
+    {
+        return Input.GetKey(KeyCode.Space);
     }
 
     private void HandleHorizontalAndVerticalInput()

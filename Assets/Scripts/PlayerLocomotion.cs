@@ -10,36 +10,66 @@ namespace NB
 
         public Transform direction;
         public Camera mainCamera;
+        public LayerMask groundLayer;
 
 
         [Header("Locomotion Settings")]
-        [SerializeField] float walkMulitplier = 50f;
+        [SerializeField] float walkMulitplier = 90f;
+        [SerializeField] float runMultiplier = 120;
         [SerializeField] float maxSpeed = 10f;
         [SerializeField] float mouseXSensitivity;
         [SerializeField] float mouseYSensitivity;
         [SerializeField] float maxYAngle = 90;
         [SerializeField] float minYAngle = -90;
+        [SerializeField] float groundedDrag = 5;
+        [SerializeField] float airDrag = 1;
+        [SerializeField] float airMultiplier = 0.01f;
+        [SerializeField] float playerHeight = 2;
+        [SerializeField] float jumpMultiplier = 300f;
 
 
 
         [Header("Locomotion Values")]
         [SerializeField] float mouseXAngle;
         [SerializeField] float mouseYAngle;
+        [SerializeField] float currentMultiplier;
+        [SerializeField] bool isGrounded;
+        [SerializeField] bool canJump;
 
         private void Start()
         {
             rb = GetComponent<Rigidbody>();
+            canJump = true;
         }
 
         public void HandlePlayerMovement()
         {
+            HandleGroundedCheck();
+            HandleRigidBodyDrag();
+            if (InputHandler.instance.IsSprintInputPressed())
+            {
+                currentMultiplier = runMultiplier;
+            }
+            else
+            {
+                currentMultiplier = walkMulitplier;
+            }
             float vertical = InputHandler.instance.verticalInput;
             float horizontal = InputHandler.instance.horizontalInput;
             Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
             Vector3 right = direction.transform.right * horizontal * Time.fixedDeltaTime;
             Vector3 inputVelocity = forward + right;
             inputVelocity.Normalize();
-            rb.AddForce(inputVelocity * walkMulitplier);
+            if (isGrounded)
+            {
+                rb.AddForce(inputVelocity * currentMultiplier, ForceMode.Force);
+            }
+            else
+            {
+                rb.AddForce(inputVelocity * currentMultiplier * airMultiplier, ForceMode.Force);
+            }
+
+            HandleJump();
             LimitSpeed();
         }
 
@@ -50,6 +80,16 @@ namespace NB
             {
                 Vector3 targetVelocity = rb.velocity.normalized * maxSpeed;
                 rb.velocity = new Vector3(targetVelocity.x, rb.velocity.y, targetVelocity.z);
+            }
+        }
+
+        public void HandleJump()
+        {
+            if (isGrounded && InputHandler.instance.IsJumpInputPressed() && canJump)
+            {
+                rb.AddForce(Vector3.up * jumpMultiplier, ForceMode.Force);
+                canJump = false;
+                StartCoroutine(JumpDelay());
             }
         }
 
@@ -70,6 +110,36 @@ namespace NB
             direction.transform.rotation = targetRotation;
         }
 
+        public void HandleGroundedCheck()
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.15f, groundLayer))
+            {
+                isGrounded = true;
+            }
+            else
+            {
+                isGrounded = false;
+            }
+        }
 
+        public IEnumerator JumpDelay()
+        {
+            yield return new WaitForSeconds(1);
+            canJump = true;
+
+        }
+
+        public void HandleRigidBodyDrag()
+        {
+            if (!isGrounded)
+            {
+                rb.drag = airDrag;
+            }
+            else
+            {
+                rb.drag = groundedDrag;
+            }
+        }
     }
 }
