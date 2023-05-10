@@ -15,6 +15,7 @@ namespace NB
         private void Update()
         {
             playerLocomotion.HandlePlayerRotation();
+            //playerLocomotion.LimitSpeed();
         }
 
         private void FixedUpdate()
