@@ -2,13 +2,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CameraPosition : MonoBehaviour
+namespace NB
 {
-    public Transform targetPosition;
-
-    // Update is called once per frame
-    void Update()
+    public class CameraPosition : MonoBehaviour
     {
-        transform.position = targetPosition.position;
+        public Transform targetPosition;
+
+        // Update is called once per frame
+        void Update()
+        {
+            transform.position = targetPosition.position;
+        }
     }
 }

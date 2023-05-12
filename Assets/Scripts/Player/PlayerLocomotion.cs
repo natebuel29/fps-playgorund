@@ -15,10 +15,14 @@ namespace NB
 
 
         [Header("Locomotion Settings")]
-        [SerializeField] float walkMulitplier = 90f;
-        [SerializeField] float slopeMulitplier = 100f;
-        [SerializeField] float runMultiplier = 120;
-        [SerializeField] float maxSpeed = 10f;
+        [SerializeField] float crouchMultiplier = 80f;
+        [SerializeField] float walkMulitplier = 120f;
+        [SerializeField] float slopeMulitplier = 125f;
+        [SerializeField] float runMultiplier = 140f;
+        [SerializeField] float maxCrouchSpeed = 5f;
+        [SerializeField] float maxWalkSpeed = 7f;
+        [SerializeField] float maxRunSpeed = 10f;
+        [SerializeField] float maxSpeed = 7f;
         [SerializeField] float mouseXSensitivity;
         [SerializeField] float mouseYSensitivity;
         [SerializeField] float maxYAngle = 90;
@@ -29,6 +33,8 @@ namespace NB
         [SerializeField] float playerHeight = 2;
         [SerializeField] float jumpMultiplier = 300f;
         [SerializeField] float maxSlopeAngle = 40f;
+        [SerializeField] float normalScale = 1f;
+        [SerializeField] float crouchedScale = 0.75f;
 
 
 
@@ -39,6 +45,17 @@ namespace NB
         [SerializeField] bool isGrounded;
         [SerializeField] bool isOnSlope;
         [SerializeField] bool canJump;
+        [SerializeField] bool isCrouching = false;
+
+        public MovementState state;
+
+        public enum MovementState
+        {
+            walking,
+            sprinting,
+            crouching,
+            air
+        }
 
         private void Start()
         {
@@ -46,21 +63,38 @@ namespace NB
             canJump = true;
         }
 
+        public void StateHandler()
+        {
+            if (isGrounded && InputHandler.instance.IsSprintInputPressed() && !isCrouching)
+            {
+                state = MovementState.sprinting;
+                maxSpeed = maxRunSpeed;
+                currentMultiplier = runMultiplier;
+            }
+            else if (isGrounded && !isCrouching)
+            {
+                state = MovementState.walking;
+                maxSpeed = maxWalkSpeed;
+                currentMultiplier = walkMulitplier;
+            }
+            else if (isGrounded && isCrouching)
+            {
+                state = MovementState.crouching;
+                maxSpeed = maxCrouchSpeed;
+                currentMultiplier = crouchMultiplier;
+            }
+            else
+            {
+                state = MovementState.air;
+                currentMultiplier = walkMulitplier * airMultiplier;
+            }
+        }
+
         public void HandlePlayerMovement()
         {
             HandleGroundedCheck();
             HandleRigidBodyDrag();
             CheckForSlope();
-
-            if (InputHandler.instance.IsSprintInputPressed())
-            {
-                currentMultiplier = runMultiplier;
-            }
-            else
-            {
-                currentMultiplier = walkMulitplier;
-            }
-
             float vertical = InputHandler.instance.verticalInput;
             float horizontal = InputHandler.instance.horizontalInput;
             Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
@@ -82,11 +116,10 @@ namespace NB
             }
             else
             {
-                rb.AddForce(inputVelocity * currentMultiplier * airMultiplier, ForceMode.Force);
+                rb.AddForce(inputVelocity * currentMultiplier, ForceMode.Force);
             }
             HandleJump();
             SpeedLimiter();
-            Debug.Log(rb.velocity);
         }
 
         public void LimitSpeed()
@@ -103,10 +136,10 @@ namespace NB
         public void SpeedLimiter()
         { // Check if the rigidbody is exceeding the speed limit
             Vector3 velocityWithoutY = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-            if (velocityWithoutY.magnitude > 10)
+            if (velocityWithoutY.magnitude > maxSpeed)
             {
                 // Calculate the force to apply
-                float forceMagnitude = (velocityWithoutY.magnitude - 10) * 1;
+                float forceMagnitude = (velocityWithoutY.magnitude - maxSpeed) * 2;
 
                 // Apply the force in the opposite direction of the rigidbody's velocity without Y component
                 Vector3 force = -velocityWithoutY.normalized * forceMagnitude;
@@ -119,7 +152,6 @@ namespace NB
             if (isGrounded && InputHandler.instance.IsJumpInputPressed() && canJump)
             {
                 rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
-                Debug.Log("Jump");
                 rb.AddForce(transform.up * jumpMultiplier, ForceMode.Impulse);
                 canJump = false;
                 StartCoroutine(JumpDelay());
@@ -170,11 +202,40 @@ namespace NB
             }
         }
 
+        public void HandlePlayerCrouch()
+        {
+            if (isCrouching && CanStand())
+            {
+                transform.localScale = new Vector3(transform.localScale.x, normalScale, transform.localScale.z);
+                isCrouching = false;
+            }
+            else if (isGrounded)
+            {
+                transform.localScale = new Vector3(transform.localScale.x, crouchedScale, transform.localScale.z);
+                rb.AddForce(Vector3.down * 30, ForceMode.Impulse);
+                isCrouching = true;
+            }
+        }
+
+        public bool CanStand()
+        {
+            bool canStand;
+            if (Physics.Raycast(transform.position, Vector3.up, 2f))
+            {
+                return false;
+            }
+            else
+            {
+                canStand = true;
+            }
+
+            return canStand;
+        }
+
         public IEnumerator JumpDelay()
         {
             yield return new WaitForSeconds(1);
             canJump = true;
-            Debug.Log("Jump Landed");
         }
 
         public void HandleRigidBodyDrag()

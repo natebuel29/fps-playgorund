@@ -6,16 +6,17 @@ namespace NB
 {
     public class PlayerManager : MonoBehaviour
     {
-        PlayerLocomotion playerLocomotion;
+        public PlayerLocomotion playerLocomotion;
 
         private void Start()
         {
             playerLocomotion = GetComponent<PlayerLocomotion>();
         }
+
         private void Update()
         {
             playerLocomotion.HandlePlayerRotation();
-            //playerLocomotion.LimitSpeed();
+            playerLocomotion.StateHandler();
         }
 
         private void FixedUpdate()
