@@ -61,6 +61,11 @@ namespace NB
             return Input.GetKey(KeyCode.Space);
         }
 
+        public bool IsSlideInputPressed()
+        {
+            return Input.GetKey(KeyCode.X);
+        }
+
         private void HandleCrouchInput()
         {
             if (Input.GetKeyDown(KeyCode.C))

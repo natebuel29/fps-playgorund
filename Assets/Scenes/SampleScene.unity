@@ -4518,10 +4518,12 @@ MonoBehaviour:
   crouchMultiplier: 80
   walkMulitplier: 120
   slopeMulitplier: 125
+  slideMultiplier: 125
   runMultiplier: 140
   maxCrouchSpeed: 5
   maxWalkSpeed: 7
   maxRunSpeed: 10
+  maxSlideSpeed: 15
   maxSpeed: 10
   mouseXSensitivity: 20
   mouseYSensitivity: 20
@@ -4535,13 +4537,16 @@ MonoBehaviour:
   maxSlopeAngle: 40
   normalScale: 1
   crouchedScale: 0.75
+  maxSlideTime: 3
   mouseXAngle: 0
   mouseYAngle: 0
   currentMultiplier: 0
   isGrounded: 0
   isOnSlope: 0
   canJump: 0
+  currentSlideTime: 0
   isCrouching: 0
+  isSliding: 0
   state: 0
 --- !u!1 &883705656
 GameObject:

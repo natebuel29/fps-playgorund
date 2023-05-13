@@ -18,10 +18,12 @@ namespace NB
         [SerializeField] float crouchMultiplier = 80f;
         [SerializeField] float walkMulitplier = 120f;
         [SerializeField] float slopeMulitplier = 125f;
+        [SerializeField] float slideMultiplier = 200f;
         [SerializeField] float runMultiplier = 140f;
         [SerializeField] float maxCrouchSpeed = 5f;
         [SerializeField] float maxWalkSpeed = 7f;
         [SerializeField] float maxRunSpeed = 10f;
+        [SerializeField] float maxSlideSpeed = 15f;
         [SerializeField] float maxSpeed = 7f;
         [SerializeField] float mouseXSensitivity;
         [SerializeField] float mouseYSensitivity;
@@ -35,6 +37,7 @@ namespace NB
         [SerializeField] float maxSlopeAngle = 40f;
         [SerializeField] float normalScale = 1f;
         [SerializeField] float crouchedScale = 0.75f;
+        [SerializeField] float maxSlideTime = 3f;
 
 
 
@@ -45,7 +48,9 @@ namespace NB
         [SerializeField] bool isGrounded;
         [SerializeField] bool isOnSlope;
         [SerializeField] bool canJump;
+        [SerializeField] float currentSlideTime;
         [SerializeField] bool isCrouching = false;
+        [SerializeField] bool isSliding = false;
 
         public MovementState state;
 
@@ -53,6 +58,7 @@ namespace NB
         {
             walking,
             sprinting,
+            sliding,
             crouching,
             air
         }
@@ -65,19 +71,24 @@ namespace NB
 
         public void StateHandler()
         {
-            if (isGrounded && InputHandler.instance.IsSprintInputPressed() && !isCrouching)
+            if (isGrounded && InputHandler.instance.IsSprintInputPressed() && !isCrouching && !isSliding)
             {
                 state = MovementState.sprinting;
                 maxSpeed = maxRunSpeed;
                 currentMultiplier = runMultiplier;
             }
-            else if (isGrounded && !isCrouching)
+            else if (isGrounded && !isCrouching && !isSliding)
             {
                 state = MovementState.walking;
                 maxSpeed = maxWalkSpeed;
                 currentMultiplier = walkMulitplier;
             }
-            else if (isGrounded && isCrouching)
+            else if (isGrounded && isSliding && !isCrouching)
+            {
+                state = MovementState.sliding;
+                maxSpeed = maxSlideSpeed;
+            }
+            else if (isGrounded && isCrouching && !isSliding)
             {
                 state = MovementState.crouching;
                 maxSpeed = maxCrouchSpeed;
@@ -155,6 +166,39 @@ namespace NB
                 rb.AddForce(transform.up * jumpMultiplier, ForceMode.Impulse);
                 canJump = false;
                 StartCoroutine(JumpDelay());
+            }
+        }
+
+        public void HandleSlide()
+        {
+            //START SLIDE
+            if (!isSliding && InputHandler.instance.IsSlideInputPressed())
+            {
+                isSliding = true;
+                currentSlideTime = maxSlideTime;
+                transform.localScale = new Vector3(transform.localScale.x, crouchedScale, transform.localScale.z);
+                rb.AddForce(Vector3.down * 30, ForceMode.Impulse);
+            }
+
+            //CONTINUE SLIDE 
+            if (isSliding && InputHandler.instance.IsSlideInputPressed())
+            {
+                float vertical = InputHandler.instance.verticalInput;
+                float horizontal = InputHandler.instance.horizontalInput;
+                Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
+                Vector3 right = direction.transform.right * horizontal * Time.fixedDeltaTime;
+                Vector3 inputVelocity = forward + right;
+
+                rb.AddForce(inputVelocity * slideMultiplier, ForceMode.Impulse);
+
+                currentSlideTime -= Time.deltaTime;
+            }
+            //END SLIDE 
+            if (isSliding && (!InputHandler.instance.IsSlideInputPressed() || currentSlideTime <= 0))
+            {
+                isSliding = false;
+                transform.localScale = new Vector3(transform.localScale.x, normalScale, transform.localScale.z);
+
             }
         }
 

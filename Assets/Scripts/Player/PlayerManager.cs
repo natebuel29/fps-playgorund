@@ -22,6 +22,7 @@ namespace NB
         private void FixedUpdate()
         {
             playerLocomotion.HandlePlayerMovement();
+            playerLocomotion.HandleSlide();
         }
     }
 }
