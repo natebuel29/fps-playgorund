@@ -16,6 +16,8 @@ namespace NB
         public float mouseHorizontalInput;
 
         public float moveAmount;
+        public bool lockMouse_flag;
+
 
         private void Awake()
         {
@@ -39,6 +41,8 @@ namespace NB
             HandleHorizontalAndVerticalInput();
             HandleMouseInput();
             HandleCrouchInput();
+            if (Input.GetKeyDown(KeyCode.F1))
+                OnLockUnlockMouse();
         }
 
         public bool IsHorizontalInputPressed()
@@ -80,7 +84,12 @@ namespace NB
             verticalInput = Input.GetAxisRaw("Vertical");
 
             moveAmount = Mathf.Clamp01(Mathf.Abs(verticalInput) + Mathf.Abs(horizontalInput));
+        }
 
+        private void OnLockUnlockMouse()
+        {
+            lockMouse_flag = !lockMouse_flag;
+            playerManager.ShouldLockMouse(lockMouse_flag);
         }
 
         private void HandleMouseInput()

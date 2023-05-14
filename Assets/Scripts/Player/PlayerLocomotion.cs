@@ -6,8 +6,7 @@ namespace NB
 {
     public class PlayerLocomotion : MonoBehaviour
     {
-        Rigidbody rb;
-
+        public Rigidbody rb;
         public Transform direction;
         public Camera mainCamera;
         public Transform cameraHolder;
@@ -15,39 +14,52 @@ namespace NB
 
 
         [Header("Locomotion Settings")]
-        [SerializeField] float crouchMultiplier = 80f;
-        [SerializeField] float walkMulitplier = 120f;
-        [SerializeField] float slopeMulitplier = 125f;
-        [SerializeField] float slideMultiplier = 200f;
-        [SerializeField] float runMultiplier = 140f;
-        [SerializeField] float maxCrouchSpeed = 5f;
-        [SerializeField] float maxWalkSpeed = 7f;
-        [SerializeField] float maxRunSpeed = 10f;
-        [SerializeField] float maxSlideSpeed = 15f;
         [SerializeField] float maxSpeed = 7f;
         [SerializeField] float mouseXSensitivity;
         [SerializeField] float mouseYSensitivity;
         [SerializeField] float maxYAngle = 90;
         [SerializeField] float minYAngle = -90;
         [SerializeField] float groundedDrag = 5;
+        [SerializeField] float playerHeight = 2;
+        [SerializeField] float normalScale = 1f;
+
+        [Header("Locomotion Settings_Walk")]
+        [SerializeField] float walkMulitplier = 120f;
+        [SerializeField] float maxWalkSpeed = 7f;
+
+        [Header("Locomotion Settings_Run")]
+        [SerializeField] float runMultiplier = 140f;
+        [SerializeField] float maxRunSpeed = 10f;
+        [Header("Locomotion Settings_Crouch")]
+        [SerializeField] float crouchMultiplier = 80f;
+        [SerializeField] float maxCrouchSpeed = 5f;
+        [SerializeField] float crouchedScale = 0.75f;
+        [Header("Locomotion Settings_Slope")]
+        [SerializeField] float slopeMulitplier = 125f;
+        [SerializeField] float maxSlopeAngle = 40f;
+        [Header("Locomotion Settings_Slide")]
+        [SerializeField] float maxSlideTime = 3f;
+        [SerializeField] float slideDelay = 1f;
+        [SerializeField] float slideMultiplier = 200f;
+        [SerializeField] float maxSlideSpeed = 15f;
+        [Header("Locomotion Settings_Air")]
+        [SerializeField] float maxAirSpeed = 15f;
+        [SerializeField] float jumpMultiplier = 300f;
         [SerializeField] float airDrag = 1;
         [SerializeField] float airMultiplier = 0.01f;
-        [SerializeField] float playerHeight = 2;
-        [SerializeField] float jumpMultiplier = 300f;
-        [SerializeField] float maxSlopeAngle = 40f;
-        [SerializeField] float normalScale = 1f;
-        [SerializeField] float crouchedScale = 0.75f;
-        [SerializeField] float maxSlideTime = 3f;
 
 
 
         [Header("Locomotion Values")]
+        [SerializeField] float desiredMoveSpeed;
+        [SerializeField] float lastDesiredMoveSpeed;
         [SerializeField] float mouseXAngle;
         [SerializeField] float mouseYAngle;
-        [SerializeField] float currentMultiplier;
+        [SerializeField] float speed;
         [SerializeField] bool isGrounded;
         [SerializeField] bool isOnSlope;
         [SerializeField] bool canJump;
+        [SerializeField] bool canSlide;
         [SerializeField] float currentSlideTime;
         [SerializeField] bool isCrouching = false;
         [SerializeField] bool isSliding = false;
@@ -67,6 +79,7 @@ namespace NB
         {
             rb = GetComponent<Rigidbody>();
             canJump = true;
+            canSlide = true;
         }
 
         public void StateHandler()
@@ -75,13 +88,13 @@ namespace NB
             {
                 state = MovementState.sprinting;
                 maxSpeed = maxRunSpeed;
-                currentMultiplier = runMultiplier;
+                speed = runMultiplier;
             }
             else if (isGrounded && !isCrouching && !isSliding)
             {
                 state = MovementState.walking;
                 maxSpeed = maxWalkSpeed;
-                currentMultiplier = walkMulitplier;
+                speed = walkMulitplier;
             }
             else if (isGrounded && isSliding && !isCrouching)
             {
@@ -92,12 +105,13 @@ namespace NB
             {
                 state = MovementState.crouching;
                 maxSpeed = maxCrouchSpeed;
-                currentMultiplier = crouchMultiplier;
+                speed = crouchMultiplier;
             }
             else
             {
                 state = MovementState.air;
-                currentMultiplier = walkMulitplier * airMultiplier;
+                maxSpeed = maxAirSpeed;
+                speed = walkMulitplier * airMultiplier;
             }
         }
 
@@ -105,32 +119,31 @@ namespace NB
         {
             HandleGroundedCheck();
             HandleRigidBodyDrag();
-            CheckForSlope();
+            isOnSlope = CheckForSlope();
             float vertical = InputHandler.instance.verticalInput;
             float horizontal = InputHandler.instance.horizontalInput;
             Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
             Vector3 right = direction.transform.right * horizontal * Time.fixedDeltaTime;
-            Vector3 inputVelocity = forward + right;
-            inputVelocity.Normalize();
+            Vector3 inputDirection = forward + right;
+            inputDirection.Normalize();
             if (isOnSlope)
             {
                 RaycastHit hit;
                 if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.25f, groundLayer))
                 {
-                    Vector3 slopeVelocity = Vector3.ProjectOnPlane(inputVelocity, hit.normal);
-                    rb.AddForce(slopeVelocity * currentMultiplier, ForceMode.Force);
+                    Vector3 slopeDirection = GetSlopeDirection(inputDirection);
+                    rb.AddForce(slopeDirection * speed, ForceMode.Force);
                 }
             }
             else if (isGrounded)
             {
-                rb.AddForce(inputVelocity * currentMultiplier, ForceMode.Force);
+                rb.AddForce(inputDirection * speed, ForceMode.Force);
             }
             else
             {
-                rb.AddForce(inputVelocity * currentMultiplier, ForceMode.Force);
+                rb.AddForce(inputDirection * speed, ForceMode.Force);
             }
             HandleJump();
-            SpeedLimiter();
         }
 
         public void LimitSpeed()
@@ -141,20 +154,6 @@ namespace NB
                 Vector3 targetVelocity = rb.velocity.normalized * maxSpeed;
 
                 rb.velocity = new Vector3(targetVelocity.x, rb.velocity.y, targetVelocity.z);
-            }
-        }
-
-        public void SpeedLimiter()
-        { // Check if the rigidbody is exceeding the speed limit
-            Vector3 velocityWithoutY = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-            if (velocityWithoutY.magnitude > maxSpeed)
-            {
-                // Calculate the force to apply
-                float forceMagnitude = (velocityWithoutY.magnitude - maxSpeed) * 2;
-
-                // Apply the force in the opposite direction of the rigidbody's velocity without Y component
-                Vector3 force = -velocityWithoutY.normalized * forceMagnitude;
-                rb.AddForce(force, ForceMode.Impulse);
             }
         }
 
@@ -172,35 +171,23 @@ namespace NB
         public void HandleSlide()
         {
             //START SLIDE
-            if (!isSliding && InputHandler.instance.IsSlideInputPressed())
+            if (!isSliding && InputHandler.instance.IsSlideInputPressed() && canSlide)
             {
-                isSliding = true;
-                currentSlideTime = maxSlideTime;
-                transform.localScale = new Vector3(transform.localScale.x, crouchedScale, transform.localScale.z);
-                rb.AddForce(Vector3.down * 30, ForceMode.Impulse);
+                StartSlide();
             }
 
             //CONTINUE SLIDE 
             if (isSliding && InputHandler.instance.IsSlideInputPressed())
             {
-                float vertical = InputHandler.instance.verticalInput;
-                float horizontal = InputHandler.instance.horizontalInput;
-                Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
-                Vector3 right = direction.transform.right * horizontal * Time.fixedDeltaTime;
-                Vector3 inputVelocity = forward + right;
-
-                rb.AddForce(inputVelocity * slideMultiplier, ForceMode.Impulse);
-
-                currentSlideTime -= Time.deltaTime;
+                HandleSlideMovement();
             }
             //END SLIDE 
             if (isSliding && (!InputHandler.instance.IsSlideInputPressed() || currentSlideTime <= 0))
             {
-                isSliding = false;
-                transform.localScale = new Vector3(transform.localScale.x, normalScale, transform.localScale.z);
-
+                EndSlide();
             }
         }
+
 
         public void HandlePlayerRotation()
         {
@@ -219,7 +206,7 @@ namespace NB
             direction.transform.rotation = targetRotation;
         }
 
-        public void HandleGroundedCheck()
+        private void HandleGroundedCheck()
         {
             RaycastHit hit;
             if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.15f, groundLayer))
@@ -232,17 +219,17 @@ namespace NB
             }
         }
 
-        public void CheckForSlope()
+        private bool CheckForSlope()
         {
             RaycastHit hit;
             if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.25f, groundLayer))
             {
                 float slopeAngle = Vector3.Angle(hit.normal, -Vector3.down);
-                isOnSlope = slopeAngle < maxSlopeAngle && slopeAngle != 0;
+                return slopeAngle < maxSlopeAngle && slopeAngle != 0;
             }
             else
             {
-                isOnSlope = false;
+                return false;
             }
         }
 
@@ -260,13 +247,65 @@ namespace NB
                 isCrouching = true;
             }
         }
+        private void StartSlide()
+        {
+            isSliding = true;
+            canSlide = false;
+            currentSlideTime = maxSlideTime;
+            transform.localScale = new Vector3(transform.localScale.x, crouchedScale, transform.localScale.z);
+            rb.AddForce(Vector3.down * 30, ForceMode.Impulse);
+        }
 
-        public bool CanStand()
+        private void HandleSlideMovement()
+        {
+            float vertical = InputHandler.instance.verticalInput;
+            float horizontal = InputHandler.instance.horizontalInput;
+            Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
+            Vector3 right = direction.transform.right * horizontal * Time.fixedDeltaTime;
+            Vector3 inputDirection = forward + right;
+            inputDirection.Normalize();
+            if (CheckForSlope() || rb.velocity.y > -0.1)
+            {
+                rb.AddForce(inputDirection * slideMultiplier, ForceMode.Force);
+
+                currentSlideTime -= Time.deltaTime;
+            }
+            else
+            {
+                Vector3 slopeDirection = GetSlopeDirection(inputDirection);
+                rb.AddForce(slopeDirection * slideMultiplier, ForceMode.Force);
+            }
+        }
+
+        private void EndSlide()
+        {
+            isSliding = false;
+            transform.localScale = new Vector3(transform.localScale.x, normalScale, transform.localScale.z);
+            StartCoroutine(SlideDelay());
+        }
+
+        private Vector3 GetSlopeDirection(Vector3 inputDirection)
+        {
+            RaycastHit hit;
+            Vector3 slopeDirection;
+            if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.25f, groundLayer))
+            {
+                slopeDirection = Vector3.ProjectOnPlane(inputDirection, hit.normal);
+            }
+            else
+            {
+                slopeDirection = Vector3.zero;
+            }
+
+            return slopeDirection;
+        }
+
+        private bool CanStand()
         {
             bool canStand;
             if (Physics.Raycast(transform.position, Vector3.up, 2f))
             {
-                return false;
+                canStand = false;
             }
             else
             {
@@ -276,10 +315,16 @@ namespace NB
             return canStand;
         }
 
-        public IEnumerator JumpDelay()
+        private IEnumerator JumpDelay()
         {
             yield return new WaitForSeconds(1);
             canJump = true;
+        }
+
+        private IEnumerator SlideDelay()
+        {
+            yield return new WaitForSeconds(slideDelay);
+            canSlide = true;
         }
 
         public void HandleRigidBodyDrag()
@@ -294,4 +339,19 @@ namespace NB
             }
         }
     }
+
+    //ALTERNATE WAY TO LIMIT SPEED USING COUNTER MOVMENT
+    // public void SpeedLimiter()
+    // { // Check if the rigidbody is exceeding the speed limit
+    //     Vector3 velocityWithoutY = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+    //     if (velocityWithoutY.magnitude > maxSpeed)
+    //     {
+    //         // Calculate the force to apply
+    //         float forceMagnitude = (velocityWithoutY.magnitude - maxSpeed) * 4;
+
+    //         // Apply the force in the opposite direction of the rigidbody's velocity without Y component
+    //         Vector3 force = -velocityWithoutY.normalized * forceMagnitude;
+    //         rb.AddForce(force, ForceMode.Impulse);
+    //     }
+    // }
 }
