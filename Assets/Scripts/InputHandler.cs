@@ -65,6 +65,16 @@ namespace NB
             return Input.GetKey(KeyCode.Space);
         }
 
+        public bool IsClimbWallPressed()
+        {
+            return Input.GetKey(KeyCode.LeftShift);
+        }
+
+        public bool IsDescendWallPressed()
+        {
+            return Input.GetKey(KeyCode.LeftControl);
+        }
+
         public bool IsSlideInputPressed()
         {
             return Input.GetKey(KeyCode.X);

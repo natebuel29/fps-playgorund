@@ -47,6 +47,10 @@ namespace NB
         [SerializeField] float jumpMultiplier = 300f;
         [SerializeField] float airDrag = 1;
         [SerializeField] float airMultiplier = 0.01f;
+        [Header("Locomotion Settings_Wallrun")]
+        [SerializeField] float wallRunSpeed = 140;
+        [SerializeField] float maxWallRunSpeed = 10;
+
 
 
 
@@ -63,6 +67,7 @@ namespace NB
         [SerializeField] float currentSlideTime;
         [SerializeField] bool isCrouching = false;
         [SerializeField] bool isSliding = false;
+        [SerializeField] public bool isWallRunning = false;
 
         public MovementState state;
 
@@ -71,6 +76,7 @@ namespace NB
             walking,
             sprinting,
             sliding,
+            wallrunning,
             crouching,
             air
         }
@@ -84,7 +90,13 @@ namespace NB
 
         public void StateHandler()
         {
-            if (isGrounded && InputHandler.instance.IsSprintInputPressed() && !isCrouching && !isSliding)
+            if (isWallRunning)
+            {
+                state = MovementState.wallrunning;
+                speed = wallRunSpeed;
+                maxSpeed = maxWallRunSpeed;
+            }
+            else if (isGrounded && InputHandler.instance.IsSprintInputPressed() && !isCrouching && !isSliding)
             {
                 state = MovementState.sprinting;
                 maxSpeed = maxRunSpeed;
@@ -111,7 +123,7 @@ namespace NB
             {
                 state = MovementState.air;
                 maxSpeed = maxAirSpeed;
-                speed = walkMulitplier * airMultiplier;
+                speed = walkMulitplier;
             }
         }
 
@@ -141,7 +153,7 @@ namespace NB
             }
             else
             {
-                rb.AddForce(inputDirection * speed, ForceMode.Force);
+                rb.AddForce(inputDirection * speed * airMultiplier, ForceMode.Force);
             }
             HandleJump();
         }
@@ -159,7 +171,7 @@ namespace NB
 
         public void HandleJump()
         {
-            if (isGrounded && InputHandler.instance.IsJumpInputPressed() && canJump)
+            if ((isGrounded || isWallRunning) && InputHandler.instance.IsJumpInputPressed() && canJump)
             {
                 rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
                 rb.AddForce(transform.up * jumpMultiplier, ForceMode.Impulse);
