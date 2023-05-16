@@ -171,7 +171,7 @@ namespace NB
 
         public void HandleJump()
         {
-            if ((isGrounded || isWallRunning) && InputHandler.instance.IsJumpInputPressed() && canJump)
+            if (isGrounded && InputHandler.instance.IsJumpInputPressed() && canJump)
             {
                 rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
                 rb.AddForce(transform.up * jumpMultiplier, ForceMode.Impulse);
