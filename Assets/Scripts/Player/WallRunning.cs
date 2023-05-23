@@ -5,7 +5,7 @@ using UnityEngine;
 namespace NB
 {
 
-    //This was cppied and modified from Dave / Game Development tutorial series:https://www.youtube.com/watch?v=gNt9wBOrQO4
+    //This was copied and modified from Dave / Game Development tutorial series:https://www.youtube.com/watch?v=gNt9wBOrQO4
     //I wasn't sure how to code wall running and wanted to know how
     public class WallRunning : MonoBehaviour
     {

@@ -88,6 +88,7 @@ namespace NB
             canSlide = true;
         }
 
+        // Handles PlayerLocomotion state and sets movement variables for each state
         public void StateHandler()
         {
             if (isWallRunning)
@@ -134,10 +135,16 @@ namespace NB
             isOnSlope = CheckForSlope();
             float vertical = InputHandler.instance.verticalInput;
             float horizontal = InputHandler.instance.horizontalInput;
+            //Calculate target forward direction by multiplying the forward vector of the direction transfom by the vertical input
             Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
+            //Calculate target right direction by multiplying the right vector of the direction transfom by the horizontal input
             Vector3 right = direction.transform.right * horizontal * Time.fixedDeltaTime;
+            // Get the inputDirection by adding the two input vectors together
             Vector3 inputDirection = forward + right;
+            //Normalize the inputDirection vector to ensure magnitude is 1 and maintain consistent movement speed regardless of combination of inputs
             inputDirection.Normalize();
+
+            //If is on slope, project inputDirection onto slope normal (see GetSlopeDirection)
             if (isOnSlope)
             {
                 RaycastHit hit;
@@ -147,10 +154,12 @@ namespace NB
                     rb.AddForce(slopeDirection * speed, ForceMode.Force);
                 }
             }
+            // Apply force to grounded character
             else if (isGrounded)
             {
                 rb.AddForce(inputDirection * speed, ForceMode.Force);
             }
+            // Apply force to character but multiply by air multipier
             else
             {
                 rb.AddForce(inputDirection * speed * airMultiplier, ForceMode.Force);
@@ -161,6 +170,7 @@ namespace NB
         public void LimitSpeed()
         {
             float mag = rb.velocity.magnitude;
+            // if magnitude (rb speed) is greater than maxSpeed, then normalize velocity and multiply by maxSpeed
             if (mag > maxSpeed)
             {
                 Vector3 targetVelocity = rb.velocity.normalized * maxSpeed;
@@ -173,7 +183,9 @@ namespace NB
         {
             if (isGrounded && InputHandler.instance.IsJumpInputPressed() && canJump)
             {
+                //Reset y velocity to 0 so we get consistent jump heights
                 rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
+                //Apply force using ForceMode.Impulse which indicates the force should be applied instantaneously and with a large magnitude
                 rb.AddForce(transform.up * jumpMultiplier, ForceMode.Impulse);
                 canJump = false;
                 StartCoroutine(JumpDelay());
@@ -206,15 +218,26 @@ namespace NB
             float newMouseX = InputHandler.instance.mouseHorizontalInput;
             float newMouseY = InputHandler.instance.mouseVerticalInput;
 
+            //Add newMouseX to mouseXAngle. This will either increase or decrease the angle and is represented in degrees.
+            //Explanation: When the game starts, mouseXAngle is at 0. When we move the mouse to the right and get an input of 50,
+            // the mouseXAngle will be at a value of 50 and the character will be rotated horizontally by 50 degrees (look right)
             mouseXAngle += newMouseX;
+            //Subtract newMouseY to mouseYAngle. This will either increase or decrease the angle and is represented in degrees.
+            //Explanation: When the game starts, mouseYAngle is at 0. When we move the mouse to the up and get an input of 50,
+            // the mouseYAngle will be at a value of -50 and the character will be rotated vertically by -50 degrees (look up)
             mouseYAngle -= newMouseY;
 
+            //Clamp the mouseYAngle between a min and max value so player won't rotate all around the X axis (you can't look all the way behind you by rotating your head vertically, right?)
             mouseYAngle = Mathf.Clamp(mouseYAngle, minYAngle, maxYAngle);
 
+            //Create a Quaternion using Euler rotating the Y angle on the x axis and the x angle on the y axis
             Quaternion targetRotation = Quaternion.Euler(mouseYAngle, mouseXAngle, 0);
+            //rotate the cameraHolder transform in both input rotations
             cameraHolder.transform.rotation = targetRotation;
 
+            //create a Quaternion using Euler rotating the Xangle on the y axis
             targetRotation = Quaternion.Euler(0, mouseXAngle, 0);
+            //rotate the direction transform in just the x rotation
             direction.transform.rotation = targetRotation;
         }
 
@@ -236,7 +259,9 @@ namespace NB
             RaycastHit hit;
             if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.25f, groundLayer))
             {
+                // Calculate the angle between the surface normal and the downward direction
                 float slopeAngle = Vector3.Angle(hit.normal, -Vector3.down);
+                // Check if the slope angle is within the acceptable range and not completely flat
                 return slopeAngle < maxSlopeAngle && slopeAngle != 0;
             }
             else
@@ -255,6 +280,7 @@ namespace NB
             else if (isGrounded)
             {
                 transform.localScale = new Vector3(transform.localScale.x, crouchedScale, transform.localScale.z);
+                //Apply down force so because character scales in to center of bean
                 rb.AddForce(Vector3.down * 30, ForceMode.Impulse);
                 isCrouching = true;
             }
@@ -270,6 +296,7 @@ namespace NB
 
         private void HandleSlideMovement()
         {
+            // Slide in any direction character is moving
             float vertical = InputHandler.instance.verticalInput;
             float horizontal = InputHandler.instance.horizontalInput;
             Vector3 forward = direction.transform.forward * vertical * Time.fixedDeltaTime;
@@ -302,10 +329,13 @@ namespace NB
             Vector3 slopeDirection;
             if (Physics.Raycast(transform.position, Vector3.down, out hit, playerHeight * 0.5f + 0.25f, groundLayer))
             {
+                // If the raycast hit the ground layer, calculate the slope direction
+                // by projecting the input direction onto the plane defined by the surface normal.
                 slopeDirection = Vector3.ProjectOnPlane(inputDirection, hit.normal);
             }
             else
             {
+                // If not ground detection, then set slopeDirection to 0
                 slopeDirection = Vector3.zero;
             }
 
